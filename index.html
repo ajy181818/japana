@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일본 여행 일정 플래너 (가족 & 친구)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Noto Sans KR & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans KR"', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        sakura: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            200: '#fecdd3',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- 최상단 여행 프로필 전환 바 (가족 여행 / 친구 여행 / 공유받은 전용 모드) -->
+    <div id="topProfileBar" class="bg-indigo-950 text-white px-4 py-2.5">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div id="profileSwitchGroup" class="flex items-center gap-2">
+                <span class="text-xs font-medium text-indigo-200 mr-1 hidden sm:inline">여행 선택:</span>
+                <button id="tab-family" onclick="switchProfile('family')" 
+                    class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 bg-sakura-500 text-white shadow-sm">
+                    <span>👨‍👩‍👧‍👦 가족 여행</span>
+                </button>
+                <button id="tab-friends" onclick="switchProfile('friends')" 
+                    class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 bg-indigo-900/80 text-indigo-200 hover:bg-indigo-800">
+                    <span>👯‍♂️ 친구 여행</span>
+                </button>
+            </div>
+            <!-- 공유 링크로 접속한 사람에게만 보이는 전용 모드 안내 -->
+            <div id="sharedModeBanner" class="hidden items-center gap-2 text-xs sm:text-sm font-bold text-amber-200">
+                <span id="sharedProfileLabel">공유받은 전용 여행</span>
+                <span class="text-[11px] font-normal bg-white/10 text-indigo-100 px-2.5 py-0.5 rounded-full">
+                    후보·일정 추가 가능
+                </span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="syncStatusBadge" class="text-[11px] sm:text-xs text-emerald-300 flex items-center gap-1">
+                    <i class="fa-solid fa-check"></i> 변경사항 반영됨
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상단 헤더 영역 -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div id="headerIconBox" class="w-10 h-10 rounded-xl bg-sakura-500 text-white flex items-center justify-center text-xl shadow-md">
+                    <i class="fa-solid fa-torii-gate"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="tripTitleInput" value="👨‍👩‍👧‍👦 가족과 함께하는 편안한 일본 여행" 
+                            class="text-lg sm:text-xl font-bold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-sakura-500 focus:outline-none px-1 transition-colors w-full sm:w-80"
+                            title="클릭하여 여행 제목 수정">
+                        <i class="fa-solid fa-pen text-xs text-slate-400"></i>
+                    </div>
+                    <p class="text-xs text-slate-500 px-1">후보지를 먼저 적고 원하는 Day에 쏙쏙 넣어보세요</p>
+                </div>
+            </div>
+
+            <!-- 상단 요약 및 유틸리티 버튼 -->
+            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 self-end sm:self-auto">
+                <div class="bg-slate-100 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-700 flex items-center gap-2">
+                    <span>총 예상 경비:</span>
+                    <span id="totalBudgetDisplay" class="font-bold text-sakura-600">¥0</span>
+                </div>
+                <button id="shareBtn" onclick="openShareModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-share-nodes"></i>
+                    <span id="shareBtnLabel">전용 주소 보내기</span>
+                </button>
+                <button onclick="copyItineraryText()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-medium rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-regular fa-copy"></i>
+                    <span class="hidden sm:inline">텍스트 복사</span>
+                </button>
+                <button id="resetBtn" onclick="openResetModal()" class="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition" title="현재 여행 일정 초기화">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 왼쪽 사이드바: 일차(Day) 선택, 후보지 보관함(버킷리스트) 및 일정 추가 폼 -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- 일차(Day) 탭 네비게이션 -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                        <i class="fa-regular fa-calendar text-sakura-500"></i> 여행 일차 관리 <span id="tripDurationBadge" class="text-xs font-normal text-slate-400 ml-1"></span>
+                    </h2>
+                    <button onclick="addNewDay()" class="text-xs font-bold text-white bg-sakura-500 hover:bg-sakura-600 px-3 py-1.5 rounded-lg transition flex items-center gap-1 shadow-xs">
+                        <i class="fa-solid fa-plus"></i> Day 추가
+                    </button>
+                </div>
+                <div id="dayTabsContainer" class="flex flex-wrap gap-2">
+                    <!-- JS로 일차 버튼 렌더링 -->
+                </div>
+            </div>
+
+            <!-- 가고 싶은 곳 후보 보관함 (버킷리스트) -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs">
+                            <i class="fa-solid fa-bookmark"></i>
+                        </span>
+                        가고 싶은 곳 후보 <span id="wishlistCount" class="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">0</span>
+                    </h2>
+                </div>
+                <p class="text-xs text-slate-500 mb-3">여러 선택지를 먼저 적어두고 1일차, 2일차에 추가해보세요!</p>
+
+                <!-- 후보지 빠른 입력 폼 -->
+                <form onsubmit="handleAddWishlist(event)" class="space-y-2 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div class="flex gap-2">
+                        <select id="wishCategoryInput" class="px-2.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-amber-500">
+                            <option value="sightseeing">⛩️ 관광</option>
+                            <option value="food">🍜 맛집</option>
+                            <option value="shopping">🛍️ 쇼핑</option>
+                            <option value="transport">🚅 이동</option>
+                            <option value="hotel">🏨 숙소</option>
+                        </select>
+                        <input type="text" id="wishTitleInput" placeholder="장소명 (예: 이치란 라멘, 온천 료칸)" required
+                            class="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="relative w-28">
+                            <span class="absolute left-2.5 top-2 text-slate-400 text-xs">¥</span>
+                            <input type="number" id="wishCostInput" placeholder="예상비용" min="0" step="100"
+                                class="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-amber-500">
+                        </div>
+                        <input type="text" id="wishMemoInput" placeholder="간단 메모 (선택)"
+                            class="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-amber-500">
+                        <button type="submit" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition shrink-0">
+                            후보 추가
+                        </button>
+                    </div>
+                </form>
+
+                <!-- 후보지 리스트 -->
+                <div id="wishlistContainer" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    <!-- JS로 후보지 아이템 렌더링 -->
+                </div>
+            </div>
+
+            <!-- 새 일정 직접 추가 카드 -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-sakura-100 text-sakura-600 flex items-center justify-center text-xs">
+                        <i class="fa-solid fa-plus"></i>
+                    </span>
+                    <span id="formDayIndicator">Day 1</span>에 바로 일정 추가
+                </h2>
+
+                <form id="scheduleForm" onsubmit="handleAddSchedule(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">시간</label>
+                            <input type="time" id="timeInput" value="10:00" required
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sakura-500/20 focus:border-sakura-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">카테고리</label>
+                            <select id="categoryInput" 
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sakura-500/20 focus:border-sakura-500">
+                                <option value="sightseeing">⛩️ 관광/명소</option>
+                                <option value="food">🍜 맛집/카페</option>
+                                <option value="transport">🚅 이동/교통</option>
+                                <option value="shopping">🛍️ 쇼핑</option>
+                                <option value="hotel">🏨 숙소/휴식</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">장소 또는 일정 제목 *</label>
+                        <input type="text" id="titleInput" placeholder="예: 아사쿠사 센소지 방문 & 나카미세 거리" required
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sakura-500/20 focus:border-sakura-500">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">예상 비용 (엔화 ¥)</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-slate-400 text-sm">¥</span>
+                                <input type="number" id="costInput" placeholder="0" min="0" step="100"
+                                    class="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sakura-500/20 focus:border-sakura-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">구글맵 검색어 (선택)</label>
+                            <input type="text" id="locationInput" placeholder="예: Senso-ji"
+                                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sakura-500/20 focus:border-sakura-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">메모 / 준비물 / 팁</label>
+                        <textarea id="memoInput" rows="2" placeholder="예: 가족 사진 찍기, 편한 신발 착용"
+                            class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sakura-500/20 focus:border-sakura-500 resize-none"></textarea>
+                    </div>
+
+                    <button type="submit" 
+                        class="w-full py-3 bg-sakura-500 hover:bg-sakura-600 active:scale-[0.99] text-white font-semibold rounded-xl shadow-md shadow-sakura-500/20 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                        <span>일정에 추가하기</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 오른쪽 메인 타임라인: 선택된 Day의 일정 목록 -->
+        <div class="lg:col-span-7">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 min-h-[500px] flex flex-col">
+                <!-- Day 헤더 -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <span id="currentDayBadge" class="px-3 py-1 bg-indigo-950 text-white text-sm font-bold rounded-lg">Day 1</span>
+                        <input type="text" id="daySubtitleInput" onchange="updateDaySubtitle(this.value)" placeholder="일차 테마 입력 (예: 도쿄 시내 탐방)"
+                            class="text-base sm:text-lg font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-sakura-500 focus:outline-none px-1">
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md">
+                            일차 경비: <strong id="dayBudgetDisplay" class="text-slate-800">¥0</strong>
+                        </span>
+                        <button id="deleteDayBtn" onclick="deleteCurrentDay()" class="text-xs text-slate-400 hover:text-rose-500 transition hidden" title="현재 일차 삭제">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 타임라인 리스트 -->
+                <div id="timelineContainer" class="flex-1 space-y-4 relative">
+                    <!-- JS로 타임라인 아이템 렌더링 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 토스트 알림 메시지 -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">알림 메시지</span>
+    </div>
+
+    <!-- 초기화 확인 모달 -->
+    <div id="resetModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-xl mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">현재 여행 일정을 초기화할까요?</h3>
+            <p class="text-sm text-slate-500 mb-5">선택하신 여행(가족 또는 친구)의 일정이 기본 샘플로 되돌아갑니다.</p>
+            <div class="flex gap-2 justify-end">
+                <button onclick="closeResetModal()" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">취소</button>
+                <button onclick="confirmResetData()" class="px-4 py-2 text-sm font-medium bg-rose-500 hover:bg-rose-600 text-white rounded-xl transition">초기화하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 가족 / 친구 전용 사이트 주소 공유 모달 -->
+    <div id="shareModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-5">
+            <div class="flex items-start justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-link"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900">전용 사이트 주소 보내기</h3>
+                        <p class="text-xs text-slate-500">링크 안에 현재 짠 일정이 자동으로 포함됩니다</p>
+                    </div>
+                </div>
+                <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- 가족 전용 링크 카드 -->
+            <div class="p-4 rounded-xl bg-rose-50/70 border border-rose-200 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-rose-900">👨‍👩‍👧‍👦 가족에게 보낼 전용 주소</span>
+                    <span class="text-[11px] font-medium text-rose-600 bg-white px-2 py-0.5 rounded-full border border-rose-200">가족 일정 바로 열림</span>
+                </div>
+                <p class="text-xs text-slate-600">부모님과 가족들이 이 주소를 누르면 <strong>가족 여행 일정</strong>만 바로 보입니다.</p>
+                <div class="flex gap-2">
+                    <input type="text" id="familyShareUrlInput" readonly
+                        class="flex-1 px-3 py-2 bg-white border border-rose-200 rounded-lg text-xs text-slate-600 focus:outline-none select-all">
+                    <a id="familyOpenLink" href="#" target="_blank" rel="noopener noreferrer"
+                        class="px-2.5 py-2 bg-white hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg transition shrink-0 flex items-center gap-1" title="새 창에서 열어보기">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                    <button onclick="copyShareUrl('family')" class="px-3.5 py-2 bg-sakura-500 hover:bg-sakura-600 text-white text-xs font-bold rounded-lg transition shrink-0 flex items-center gap-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>주소 복사</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 친구 전용 링크 카드 -->
+            <div class="p-4 rounded-xl bg-sky-50/70 border border-sky-200 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold text-sky-900">👯‍♂️ 친구에게 보낼 전용 주소</span>
+                    <span class="text-[11px] font-medium text-sky-600 bg-white px-2 py-0.5 rounded-full border border-sky-200">친구 일정 바로 열림</span>
+                </div>
+                <p class="text-xs text-slate-600">친구들이 이 주소를 누르면 <strong>친구 여행 일정</strong>만 바로 보입니다.</p>
+                <div class="flex gap-2">
+                    <input type="text" id="friendsShareUrlInput" readonly
+                        class="flex-1 px-3 py-2 bg-white border border-sky-200 rounded-lg text-xs text-slate-600 focus:outline-none select-all">
+                    <a id="friendsOpenLink" href="#" target="_blank" rel="noopener noreferrer"
+                        class="px-2.5 py-2 bg-white hover:bg-sky-100 text-sky-700 border border-sky-200 text-xs font-bold rounded-lg transition shrink-0 flex items-center gap-1" title="새 창에서 열어보기">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                    <button onclick="copyShareUrl('friends')" class="px-3.5 py-2 bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold rounded-lg transition shrink-0 flex items-center gap-1.5">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>주소 복사</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="shareEnvNotice" class="bg-slate-50 p-3 rounded-xl text-[11px] text-slate-500 leading-relaxed">
+                💡 <strong>안내:</strong> 이 파일을 Netlify Drop이나 GitHub Pages 등에 올려 <code>https://</code> 주소로 열었을 때, 복사한 주소를 카톡으로 보내면 누구나 클릭해 바로 접속할 수 있습니다.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 카테고리별 스타일 및 아이콘 매핑
+        const CATEGORY_META = {
+            sightseeing: { label: '관광/명소', icon: '⛩️', badgeClass: 'bg-rose-50 text-rose-600 border-rose-200' },
+            food:        { label: '맛집/카페', icon: '🍜', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+            transport:   { label: '이동/교통', icon: '🚅', badgeClass: 'bg-sky-50 text-sky-700 border-sky-200' },
+            shopping:    { label: '쇼핑',     icon: '🛍️', badgeClass: 'bg-purple-50 text-purple-600 border-purple-200' },
+            hotel:       { label: '숙소/휴식', icon: '🏨', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+        };
+
+        // 가족 여행 & 친구 여행 각각 초기 샘플 데이터
+        const DEFAULT_PROFILES = {
+            family: {
+                tripTitle: '👨‍👩‍👧‍👦 가족과 함께하는 편안한 일본 여행',
+                days: [
+                    {
+                        id: 1,
+                        subtitle: '도착 & 여유로운 시내 산책',
+                        items: [
+                            { id: 101, time: '11:00', category: 'transport', title: '공항 도착 & 전용 차량/리무진 이동', cost: 3000, location: 'Tokyo Station', memo: '부모님 짐 이동 동선 미리 체크' },
+                            { id: 102, time: '13:30', category: 'food', title: '전통 장어덮밥(히츠마부시) 점심', cost: 4500, location: 'Hitsumabushi', memo: '좌석이 편한 식당으로 사전 예약' },
+                            { id: 103, time: '15:30', category: 'hotel', title: '호텔 체크인 & 휴식', cost: 0, location: 'Tokyo Hotel', memo: '잠시 휴식 후 저녁 식사 이동' }
+                        ]
+                    },
+                    {
+                        id: 2,
+                        subtitle: '명소 관람 & 온천 힐링',
+                        items: [
+                            { id: 201, time: '10:00', category: 'sightseeing', title: '아사쿠사 센소지 & 인력거 체험', cost: 5000, location: 'Senso-ji', memo: '가족 단체 사진 찍기 좋은 스팟' }
+                        ]
+                    }
+                ],
+                wishlist: [
+                    { id: 901, category: 'food', title: '스키야키 전문점 저녁 코스', cost: 8000, memo: '부모님이 좋아하실 만한 곳' },
+                    { id: 902, category: 'sightseeing', title: '오다이바 유람선 탑승', cost: 1500, memo: '해질녘에 타면 야경이 멋짐' },
+                    { id: 903, category: 'shopping', title: '백화점 식품관 디저트 쇼핑', cost: 3000, memo: '손수건, 화과자 선물 구매' }
+                ]
+            },
+            friends: {
+                tripTitle: '👯‍♂️ 친구들과 떠나는 텐션 폭발 일본 여행',
+                days: [
+                    {
+                        id: 1,
+                        subtitle: '도착하자마자 맛집 & 쇼핑 풀코스',
+                        items: [
+                            { id: 301, time: '10:30', category: 'transport', title: '공항 도착 & 교통패스 개시', cost: 2580, location: 'Narita Airport', memo: '포켓 와이파이 / eSIM 활성화 확인' },
+                            { id: 302, time: '13:00', category: 'food', title: '아사쿠사 규카츠 오픈런', cost: 2200, location: 'Asakusa Gyukatsu', memo: '웨이팅 감안해서 일찍 가기' },
+                            { id: 303, time: '19:00', category: 'sightseeing', title: '시부야 스카이 야경 & 인생샷', cost: 2500, location: 'SHIBUYA SKY', memo: '일몰 30분 전 티켓 예매 필수!' }
+                        ]
+                    },
+                    {
+                        id: 2,
+                        subtitle: '하라주쿠 빈티지 & 이자카야 투어',
+                        items: [
+                            { id: 401, time: '12:00', category: 'shopping', title: '하라주쿠 캣스트리트 편집샵 투어', cost: 15000, location: 'Cat Street Harajuku', memo: '스트릿 브랜드, 빈티지 샵 구경' }
+                        ]
+                    }
+                ],
+                wishlist: [
+                    { id: 801, category: 'shopping', title: '돈키호테 새벽 쇼핑 털기', cost: 10000, memo: '면세 여권 무조건 지참' },
+                    { id: 802, category: 'food', title: '신주쿠 오모이데요코초 꼬치구이 & 생맥주', cost: 3500, memo: '2차로 가기 좋은 분위기' },
+                    { id: 803, category: 'sightseeing', title: '유니버설 스튜디오 / 디즈니랜드', cost: 9500, memo: '익스프레스 패스 고민해보기' }
+                ]
+            }
+        };
+
+        let activeProfile = 'family';
+        let allTrips = JSON.parse(JSON.stringify(DEFAULT_PROFILES));
+        let currentDayIndex = 0;
+        let isSharedView = false; // 공유 링크로 들어온 전용 보기/추가 모드 여부
+
+        // UTF-8 문자열을 안전하게 Base64 URL 인코딩/디코딩 (일정 데이터를 URL에 담아 공유하기 위함)
+        function encodeTripData(obj) {
+            try {
+                const jsonStr = JSON.stringify(obj);
+                const bytes = new TextEncoder().encode(jsonStr);
+                let binStr = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    binStr += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binStr).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function decodeTripData(base64UrlStr) {
+            try {
+                let b64 = base64UrlStr.replace(/-/g, '+').replace(/_/g, '/');
+                while (b64.length % 4) b64 += '=';
+                const binStr = atob(b64);
+                const bytes = new Uint8Array(binStr.length);
+                for (let i = 0; i < binStr.length; i++) {
+                    bytes[i] = binStr.charCodeAt(i);
+                }
+                const jsonStr = new TextDecoder().decode(bytes);
+                return JSON.parse(jsonStr);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // URL 파라미터 및 해시에서 공유된 일정 복원 + 프로필 자동 선택
+        function initFromUrlAndMemory() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const tripParam = params.get('trip');
+                const sharedParam = params.get('shared');
+                if (tripParam === 'family' || tripParam === 'friends') {
+                    activeProfile = tripParam;
+                }
+                if (sharedParam === '1') {
+                    isSharedView = true;
+                }
+
+                // URL 해시(#data=...)에 담긴 공유 데이터가 있으면 불러오기
+                const hash = window.location.hash;
+                if (hash && hash.includes('data=')) {
+                    const hashParams = new URLSearchParams(hash.substring(1));
+                    const targetProfile = hashParams.get('trip') || activeProfile;
+                    const encodedData = hashParams.get('data');
+                    if (hashParams.get('shared') === '1') {
+                        isSharedView = true;
+                    }
+                    if (encodedData) {
+                        const decoded = decodeTripData(encodedData);
+                        if (decoded && decoded.days) {
+                            if (targetProfile === 'friends') {
+                                activeProfile = 'friends';
+                                allTrips.friends = decoded;
+                            } else {
+                                activeProfile = 'family';
+                                allTrips.family = decoded;
+                            }
+                        }
+                    } else if (targetProfile === 'family' || targetProfile === 'friends') {
+                        activeProfile = targetProfile;
+                    }
+                }
+            } catch (e) {
+                // URL 파싱 실패 시 기본값 유지
+            }
+        }
+
+        // 공유 링크 접속 시 다른 여행 탭 숨기기 및 전용 모드 UI 반영
+        function applySharedViewMode() {
+            const switchGroup = document.getElementById('profileSwitchGroup');
+            const sharedBanner = document.getElementById('sharedModeBanner');
+            const sharedLabel = document.getElementById('sharedProfileLabel');
+            const shareBtnLabel = document.getElementById('shareBtnLabel');
+            const resetBtn = document.getElementById('resetBtn');
+
+            if (isSharedView) {
+                if (switchGroup) switchGroup.classList.add('hidden');
+                if (sharedBanner) {
+                    sharedBanner.classList.remove('hidden');
+                    sharedBanner.classList.add('flex');
+                }
+                if (sharedLabel) {
+                    sharedLabel.textContent = activeProfile === 'family'
+                        ? '👨‍👩‍👧‍👦 가족 여행 전용 일정'
+                        : '👯‍♂️ 친구 여행 전용 일정';
+                }
+                if (shareBtnLabel) {
+                    shareBtnLabel.textContent = '추가한 일정 공유하기';
+                }
+                if (resetBtn) {
+                    resetBtn.classList.add('hidden');
+                }
+            } else {
+                if (switchGroup) switchGroup.classList.remove('hidden');
+                if (sharedBanner) {
+                    sharedBanner.classList.add('hidden');
+                    sharedBanner.classList.remove('flex');
+                }
+                if (shareBtnLabel) {
+                    shareBtnLabel.textContent = '전용 주소 보내기';
+                }
+                if (resetBtn) {
+                    resetBtn.classList.remove('hidden');
+                }
+            }
+        }
+
+        // 저장 상태 표시 업데이트
+        function saveAllTrips() {
+            try {
+                localStorage.setItem('japan_trip_dual_v1', JSON.stringify(allTrips));
+                const badge = document.getElementById('syncStatusBadge');
+                if (badge) {
+                    badge.innerHTML = `<i class="fa-solid fa-check"></i> 저장됨 (${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})`;
+                }
+            } catch (e) {
+                console.error('Failed to save state:', e);
+            }
+        }
+
+        function getCurrentTrip() {
+            return allTrips[activeProfile];
+        }
+
+        function switchProfile(profileKey, silent = false) {
+            activeProfile = (profileKey === 'friends') ? 'friends' : 'family';
+            currentDayIndex = 0;
+
+            const famBtn = document.getElementById('tab-family');
+            const friBtn = document.getElementById('tab-friends');
+
+            if (activeProfile === 'family') {
+                if (famBtn) famBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 bg-sakura-500 text-white shadow-sm';
+                if (friBtn) friBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 bg-indigo-900/80 text-indigo-200 hover:bg-indigo-800';
+            } else {
+                if (friBtn) friBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 bg-sky-500 text-white shadow-sm';
+                if (famBtn) famBtn.className = 'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition flex items-center gap-1.5 bg-indigo-900/80 text-indigo-200 hover:bg-indigo-800';
+            }
+
+            applySharedViewMode();
+            renderApp();
+            if (!silent) {
+                showToast(activeProfile === 'family' ? '👨‍👩‍👧‍👦 가족 여행 일정으로 전환했습니다.' : '👯‍♂️ 친구 여행 일정으로 전환했습니다.');
+            }
+        }
+
+        function renderApp() {
+            const trip = getCurrentTrip();
+            if (!trip || !Array.isArray(trip.days) || trip.days.length === 0) {
+                allTrips[activeProfile] = JSON.parse(JSON.stringify(DEFAULT_PROFILES[activeProfile]));
+            }
+            const activeTrip = getCurrentTrip();
+            if (currentDayIndex >= activeTrip.days.length) {
+                currentDayIndex = 0;
+            }
+            document.getElementById('tripTitleInput').value = activeTrip.tripTitle || '';
+            renderDayTabs();
+            renderWishlist();
+            renderTimeline();
+            updateBudgets();
+        }
+
+        function renderDayTabs() {
+            const trip = getCurrentTrip();
+            const container = document.getElementById('dayTabsContainer');
+            const durationBadge = document.getElementById('tripDurationBadge');
+            const totalDays = trip.days.length;
+
+            durationBadge.textContent = totalDays > 1 ? `(${totalDays - 1}박 ${totalDays}일)` : `(당일치기)`;
+            container.innerHTML = '';
+
+            trip.days.forEach((day, idx) => {
+                const isActive = idx === currentDayIndex;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 ${
+                    isActive
+                        ? 'bg-sakura-500 text-white shadow-sm shadow-sakura-500/30'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`;
+                btn.innerHTML = `<span>Day ${idx + 1}</span> <span class="text-[11px] opacity-80">(${day.items.length})</span>`;
+                btn.onclick = () => {
+                    currentDayIndex = idx;
+                    renderApp();
+                };
+                container.appendChild(btn);
+            });
+
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-bold border-2 border-dashed border-slate-300 text-slate-500 hover:border-sakura-400 hover:text-sakura-600 hover:bg-sakura-50/50 transition flex items-center gap-1';
+            addBtn.title = '새로운 일차 추가';
+            addBtn.innerHTML = `<i class="fa-solid fa-plus"></i>`;
+            addBtn.onclick = addNewDay;
+            container.appendChild(addBtn);
+        }
+
+        function renderWishlist() {
+            const trip = getCurrentTrip();
+            const container = document.getElementById('wishlistContainer');
+            const countBadge = document.getElementById('wishlistCount');
+            const wishlist = trip.wishlist || [];
+            countBadge.textContent = wishlist.length;
+            container.innerHTML = '';
+
+            if (wishlist.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-xs text-slate-400 bg-slate-50/70 rounded-xl border border-dashed border-slate-200">
+                        저장된 후보지가 없습니다.<br>위 입력창에 가고 싶은 곳을 먼저 적어보세요!
+                    </div>
+                `;
+                return;
+            }
+
+            const dayOptionsHtml = trip.days.map((_, idx) =>
+                `<option value="${idx}" ${idx === currentDayIndex ? 'selected' : ''}>Day ${idx + 1}</option>`
+            ).join('');
+
+            wishlist.forEach((wish) => {
+                const meta = CATEGORY_META[wish.category] || CATEGORY_META.sightseeing;
+                const itemEl = document.createElement('div');
+                itemEl.className = 'p-3 bg-slate-50 hover:bg-amber-50/40 rounded-xl border border-slate-200/80 transition flex flex-col gap-2';
+                itemEl.innerHTML = `
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-start gap-2 min-w-0">
+                            <span class="text-xs px-1.5 py-0.5 rounded border shrink-0 mt-0.5 ${meta.badgeClass}">${meta.icon}</span>
+                            <div class="min-w-0">
+                                <p class="text-xs sm:text-sm font-bold text-slate-800 truncate">${escapeHtml(wish.title)}</p>
+                                <div class="flex flex-wrap items-center gap-2 mt-0.5">
+                                    ${wish.cost > 0 ? `<span class="text-[11px] font-semibold text-slate-500">¥${Number(wish.cost).toLocaleString()}</span>` : ''}
+                                    ${wish.memo ? `<span class="text-[11px] text-slate-400 truncate max-w-[180px]">${escapeHtml(wish.memo)}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="deleteWishlistItem(${wish.id})" class="text-slate-400 hover:text-rose-500 p-1 text-xs shrink-0" title="후보 삭제">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-end gap-1.5 pt-1.5 border-t border-slate-200/60">
+                        <select id="assign-day-${wish.id}" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-sakura-500">
+                            ${dayOptionsHtml}
+                        </select>
+                        <input type="time" id="assign-time-${wish.id}" value="12:00" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-sakura-500">
+                        <button type="button" onclick="assignWishToDay(${wish.id})" class="px-2.5 py-1 bg-sakura-500 hover:bg-sakura-600 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shrink-0">
+                            <span>일정 추가</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(itemEl);
+            });
+        }
+
+        function handleAddWishlist(event) {
+            event.preventDefault();
+            const trip = getCurrentTrip();
+            if (!Array.isArray(trip.wishlist)) trip.wishlist = [];
+            const category = document.getElementById('wishCategoryInput').value;
+            const title = document.getElementById('wishTitleInput').value.trim();
+            const cost = Number(document.getElementById('wishCostInput').value) || 0;
+            const memo = document.getElementById('wishMemoInput').value.trim();
+
+            if (!title) return;
+
+            trip.wishlist.unshift({
+                id: Date.now(),
+                category,
+                title,
+                cost,
+                memo
+            });
+
+            document.getElementById('wishTitleInput').value = '';
+            document.getElementById('wishCostInput').value = '';
+            document.getElementById('wishMemoInput').value = '';
+
+            saveAllTrips();
+            renderWishlist();
+            showToast(`'${title}' 후보가 추가되었습니다!`);
+        }
+
+        function assignWishToDay(wishId) {
+            const trip = getCurrentTrip();
+            const wishIndex = (trip.wishlist || []).findIndex(w => w.id === wishId);
+            if (wishIndex === -1) return;
+
+            const wish = trip.wishlist[wishIndex];
+            const targetDayIdx = Number(document.getElementById(`assign-day-${wishId}`).value);
+            const targetTime = document.getElementById(`assign-time-${wishId}`).value || '12:00';
+
+            trip.days[targetDayIdx].items.push({
+                id: Date.now(),
+                time: targetTime,
+                category: wish.category,
+                title: wish.title,
+                cost: wish.cost,
+                location: wish.title,
+                memo: wish.memo
+            });
+
+            trip.wishlist.splice(wishIndex, 1);
+            currentDayIndex = targetDayIdx;
+            saveAllTrips();
+            renderApp();
+            showToast(`Day ${targetDayIdx + 1} (${targetTime}) 일정에 추가되었습니다!`);
+        }
+
+        function deleteWishlistItem(wishId) {
+            const trip = getCurrentTrip();
+            trip.wishlist = (trip.wishlist || []).filter(w => w.id !== wishId);
+            saveAllTrips();
+            renderWishlist();
+            showToast('후보에서 삭제되었습니다.');
+        }
+
+        function renderTimeline() {
+            const trip = getCurrentTrip();
+            const currentDay = trip.days[currentDayIndex];
+            document.getElementById('formDayIndicator').textContent = `Day ${currentDayIndex + 1}`;
+            document.getElementById('currentDayBadge').textContent = `Day ${currentDayIndex + 1}`;
+            document.getElementById('daySubtitleInput').value = currentDay.subtitle || '';
+
+            const deleteDayBtn = document.getElementById('deleteDayBtn');
+            if (trip.days.length > 1) {
+                deleteDayBtn.classList.remove('hidden');
+            } else {
+                deleteDayBtn.classList.add('hidden');
+            }
+
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = '';
+
+            currentDay.items.sort((a, b) => a.time.localeCompare(b.time));
+
+            if (currentDay.items.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 text-center text-slate-400">
+                        <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-2xl mb-3">🗾</div>
+                        <p class="text-sm font-medium text-slate-600">아직 등록된 일정이 없습니다.</p>
+                        <p class="text-xs mt-1">왼쪽 후보 보관함에서 추가하거나 직접 일정을 입력해보세요!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            currentDay.items.forEach((item) => {
+                const meta = CATEGORY_META[item.category] || CATEGORY_META.sightseeing;
+                const mapQuery = encodeURIComponent(item.location || item.title);
+                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
+
+                const card = document.createElement('div');
+                card.className = 'group relative pl-6 sm:pl-8 pb-2 border-l-2 border-slate-200 last:border-l-transparent';
+                card.innerHTML = `
+                    <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-sakura-500"></div>
+                    <div class="bg-slate-50 hover:bg-white p-4 rounded-xl border border-slate-200/80 hover:border-sakura-200 hover:shadow-md transition-all">
+                        <div class="flex flex-wrap items-start justify-between gap-2 mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-indigo-950 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                                    ${item.time}
+                                </span>
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-md border ${meta.badgeClass}">
+                                    ${meta.icon} ${meta.label}
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                ${item.cost > 0 ? `<span class="text-xs font-bold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200">¥${Number(item.cost).toLocaleString()}</span>` : ''}
+                                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" 
+                                   class="text-xs text-sky-600 hover:text-sky-700 bg-sky-50 hover:bg-sky-100 px-2 py-1 rounded-md transition flex items-center gap-1" title="구글맵에서 보기">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    <span class="hidden sm:inline">지도</span>
+                                </a>
+                                <button type="button" onclick="deleteScheduleItem(${item.id})" 
+                                        class="text-slate-400 hover:text-rose-500 p-1 rounded-md transition" title="일정 삭제">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <h3 class="text-base font-bold text-slate-900 mt-1">${escapeHtml(item.title)}</h3>
+                        
+                        ${item.memo ? `
+                            <p class="text-xs sm:text-sm text-slate-600 mt-2 bg-white p-2.5 rounded-lg border border-slate-100 flex items-start gap-2">
+                                <i class="fa-regular fa-note-sticky text-slate-400 mt-0.5"></i>
+                                <span>${escapeHtml(item.memo)}</span>
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updateBudgets() {
+            const trip = getCurrentTrip();
+            let totalBudget = 0;
+            let currentDayBudget = 0;
+
+            trip.days.forEach((day, idx) => {
+                const daySum = day.items.reduce((sum, item) => sum + (Number(item.cost) || 0), 0);
+                totalBudget += daySum;
+                if (idx === currentDayIndex) {
+                    currentDayBudget = daySum;
+                }
+            });
+
+            document.getElementById('totalBudgetDisplay').textContent = `¥${totalBudget.toLocaleString()}`;
+            document.getElementById('dayBudgetDisplay').textContent = `¥${currentDayBudget.toLocaleString()}`;
+        }
+
+        function handleAddSchedule(event) {
+            event.preventDefault();
+            const trip = getCurrentTrip();
+
+            const time = document.getElementById('timeInput').value;
+            const category = document.getElementById('categoryInput').value;
+            const title = document.getElementById('titleInput').value.trim();
+            const cost = Number(document.getElementById('costInput').value) || 0;
+            const location = document.getElementById('locationInput').value.trim();
+            const memo = document.getElementById('memoInput').value.trim();
+
+            if (!title) return;
+
+            trip.days[currentDayIndex].items.push({
+                id: Date.now(),
+                time,
+                category,
+                title,
+                cost,
+                location,
+                memo
+            });
+
+            saveAllTrips();
+            renderApp();
+
+            document.getElementById('titleInput').value = '';
+            document.getElementById('costInput').value = '';
+            document.getElementById('locationInput').value = '';
+            document.getElementById('memoInput').value = '';
+            advanceTimeInput(time);
+
+            showToast(`Day ${currentDayIndex + 1}에 일정이 추가되었습니다!`);
+        }
+
+        function advanceTimeInput(currentTime) {
+            const [hh, mm] = currentTime.split(':').map(Number);
+            const nextHour = (hh + 1) % 24;
+            document.getElementById('timeInput').value = `${String(nextHour).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+        }
+
+        function deleteScheduleItem(itemId) {
+            const trip = getCurrentTrip();
+            const currentDay = trip.days[currentDayIndex];
+            currentDay.items = currentDay.items.filter(item => item.id !== itemId);
+            saveAllTrips();
+            renderApp();
+            showToast('일정이 삭제되었습니다.');
+        }
+
+        function addNewDay() {
+            const trip = getCurrentTrip();
+            const nextDayNum = trip.days.length + 1;
+            trip.days.push({
+                id: Date.now(),
+                subtitle: `${nextDayNum}일차 여행 코스`,
+                items: []
+            });
+            currentDayIndex = trip.days.length - 1;
+            saveAllTrips();
+            renderApp();
+            showToast(`Day ${nextDayNum}이 추가되었습니다.`);
+        }
+
+        function deleteCurrentDay() {
+            const trip = getCurrentTrip();
+            if (trip.days.length <= 1) return;
+            trip.days.splice(currentDayIndex, 1);
+            currentDayIndex = Math.max(0, currentDayIndex - 1);
+            saveAllTrips();
+            renderApp();
+            showToast('선택한 일차가 삭제되었습니다.');
+        }
+
+        function updateDaySubtitle(newSubtitle) {
+            const trip = getCurrentTrip();
+            trip.days[currentDayIndex].subtitle = newSubtitle;
+            saveAllTrips();
+        }
+
+        document.getElementById('tripTitleInput').addEventListener('change', (e) => {
+            const trip = getCurrentTrip();
+            trip.tripTitle = e.target.value.trim() || '나의 일본 여행';
+            saveAllTrips();
+            showToast('여행 제목이 저장되었습니다.');
+        });
+
+        function copyItineraryText() {
+            const trip = getCurrentTrip();
+            let text = `🇯🇵 [${trip.tripTitle}]\n\n`;
+            let total = 0;
+
+            trip.days.forEach((day, idx) => {
+                text += `📅 Day ${idx + 1}${day.subtitle ? ` - ${day.subtitle}` : ''}\n`;
+                if (day.items.length === 0) {
+                    text += `  • 등록된 일정 없음\n`;
+                } else {
+                    day.items.forEach(item => {
+                        const costStr = item.cost > 0 ? ` (¥${Number(item.cost).toLocaleString()})` : '';
+                        text += `  • ${item.time} ${item.title}${costStr}\n`;
+                        if (item.memo) text += `    └ ${item.memo}\n`;
+                        total += Number(item.cost) || 0;
+                    });
+                }
+                text += `\n`;
+            });
+
+            text += `💰 총 예상 경비: ¥${total.toLocaleString()}`;
+
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('전체 일정이 클립보드에 복사되었습니다! 카톡에 붙여넣어 보세요.');
+            } catch (err) {
+                showToast('복사에 실패했습니다.');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function openResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function confirmResetData() {
+            allTrips[activeProfile] = JSON.parse(JSON.stringify(DEFAULT_PROFILES[activeProfile]));
+            currentDayIndex = 0;
+            saveAllTrips();
+            renderApp();
+            closeResetModal();
+            showToast('현재 여행 일정이 초기화되었습니다.');
+        }
+
+        // 전용 공유 URL 생성 (공유받는 사람이 해당 여행만 보고 추가할 수 있도록 shared=1 포함)
+        function buildShareUrl(profileKey) {
+            const baseUrl = window.location.href.split('?')[0].split('#')[0];
+            const encoded = encodeTripData(allTrips[profileKey]);
+            return `${baseUrl}?trip=${profileKey}&shared=1#trip=${profileKey}&shared=1&data=${encoded}`;
+        }
+
+        function openShareModal() {
+            const modal = document.getElementById('shareModal');
+            const famInput = document.getElementById('familyShareUrlInput');
+            const friInput = document.getElementById('friendsShareUrlInput');
+            const famLink = document.getElementById('familyOpenLink');
+            const friLink = document.getElementById('friendsOpenLink');
+            const noticeEl = document.getElementById('shareEnvNotice');
+
+            const famUrl = buildShareUrl('family');
+            const friUrl = buildShareUrl('friends');
+
+            if (famInput) famInput.value = famUrl;
+            if (friInput) friInput.value = friUrl;
+            if (famLink) famLink.href = famUrl;
+            if (friLink) friLink.href = friUrl;
+
+            // 현재가 미리보기 샌드박스(blob / about:srcdoc)나 로컬 파일(file:)인지 안내
+            const isWebHosted = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+            const isSandbox = window.location.href.startsWith('blob:') || window.location.href.includes('srcdoc');
+            if (noticeEl) {
+                if (isWebHosted && !isSandbox) {
+                    noticeEl.innerHTML = '✅ <strong>실제 웹 주소로 실행 중입니다!</strong> 복사한 전용 주소를 카톡이나 문자로 보내면 클릭해 바로 접속할 수 있습니다.';
+                } else {
+                    noticeEl.innerHTML = '⚠️ <strong>현재 미리보기/로컬 화면입니다.</strong> 가족·친구 폰에서 클릭해 바로 열리게 하려면 이 HTML 파일을 <strong>Netlify Drop</strong> 같은 무료 웹 호스팅에 올려 <code>https://</code> 주소로 연 뒤 주소를 복사해 보내주세요!';
+                }
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeShareModal() {
+            const modal = document.getElementById('shareModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function copyShareUrl(profileKey) {
+            const url = buildShareUrl(profileKey);
+            const textarea = document.createElement('textarea');
+            textarea.value = url;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast(profileKey === 'family' ? '👨‍👩‍👧‍👦 가족 전용 주소가 복사되었습니다!' : '👯‍♂️ 친구 전용 주소가 복사되었습니다!');
+            } catch (err) {
+                showToast('주소 복사에 실패했습니다.');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            });
+        }
+
+        function initApp() {
+            initFromUrlAndMemory();
+            switchProfile(activeProfile, true);
+        }
+
+        // DOM 로드 완료 시 즉시 실행
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+    </script>
+</body>
+</html>
